@@ -136,7 +136,7 @@ target_compile_features(dynamix PUBLIC
 )
 
 target_include_directories(dynamix PUBLIC
-    ${dynamix_include}
+    $<BUILD_INTERFACE:${dynamix_include}>
 )
 
 # resolve options
@@ -172,3 +172,20 @@ endif()
 if(DYNAMIX_BUILD_PERF)
     add_subdirectory(perf)
 endif()
+
+
+# Create an install target
+install(TARGETS dynamix
+        EXPORT dynamix-config
+        ARCHIVE DESTINATION lib/
+        LIBRARY DESTINATION lib/
+        RUNTIME DESTINATION lib/
+        INCLUDES DESTINATION include)
+
+install(EXPORT dynamix-config
+        FILE dynamix-config.cmake
+        NAMESPACE dynamix::
+        DESTINATION share/dynamix/cmake)
+
+install(DIRECTORY include/dynamix
+        DESTINATION include FILES_MATCHING PATTERN "*.hpp")
