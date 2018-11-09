@@ -6,8 +6,8 @@
 // https://opensource.org/licenses/MIT
 //
 #include <dynamix/dynamix.hpp>
+#include <iostream>
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest/doctest.h"
 
 #include "test_mixins.hpp"

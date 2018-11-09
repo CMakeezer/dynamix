@@ -11,6 +11,12 @@ cmake_minimum_required(VERSION 3.2.2)
 if(CMAKE_SOURCE_DIR STREQUAL CMAKE_CURRENT_SOURCE_DIR)
     # if DynaMix is built as root, activate folders
     set_property(GLOBAL PROPERTY USE_FOLDERS ON)
+
+    # is_demo is used below to enable the build of various subprojects
+    # which typically wouldn't be built if DynaMix is a subdirectory of a project
+    set(is_demo ON)
+else()
+    set(is_demo OFF)
 endif()
 
 project(dynamix)
@@ -24,20 +30,23 @@ include(src_group)
 
 option(DYNAMIX_SHARED_LIB "DynaMix: build as a shared library" ON)
 
-option(DYNAMIX_BUILD_UNIT_TESTS "DynaMix: enable testing and build tests" ON)
+option(DYNAMIX_BUILD_UNIT_TESTS "DynaMix: enable testing and build tests" ${is_demo})
 
-option(DYNAMIX_BUILD_EXAMPLES "DynaMix: build examples" ON)
+option(DYNAMIX_BUILD_EXAMPLES "DynaMix: build examples" ${is_demo})
 # Individual example settings. Only relevant if DYNAMIX_BUILD_EXAMPLES is on
-option(DYNAMIX_EXAMPLE_HELLO_WORLD "DynaMix: build hello world example" ON)
-option(DYNAMIX_EXAMPLE_BASIC "DynaMix: build basic example" ON)
-option(DYNAMIX_EXAMPLE_MULTI_DLL "DynaMix: build multi_dll example" ON)
+option(DYNAMIX_EXAMPLE_HELLO_WORLD "DynaMix: build hello world example" ${is_demo})
+option(DYNAMIX_EXAMPLE_BASIC "DynaMix: build basic example" ${is_demo})
+option(DYNAMIX_EXAMPLE_MULTI_DLL "DynaMix: build multi_dll example" ${is_demo})
 
-option(DYNAMIX_BUILD_SCRATCH "DynaMix: build scratch project" ON)
+option(DYNAMIX_BUILD_SCRATCH "DynaMix: build scratch project" ${is_demo})
 
-option(DYNAMIX_BUILD_TUTORIALS "DynaMix: build tutorials" ON)
+option(DYNAMIX_BUILD_TUTORIALS "DynaMix: build tutorials" ${is_demo})
 
 # Off by default since generated.h/cpp needs to be... well... generated for this to work
 option(DYNAMIX_BUILD_PERF "DynaMix: build performance tests (requires manual code generation step)" OFF)
+
+# Off by default since files need to be generated for this to work
+option(DYNAMIX_BUILD_COMPILER_PERF "DynaMix: build compilation performance tests (requires manual code generation step)" OFF)
 
 # config
 
@@ -83,9 +92,12 @@ src_group(public dynamix_sources
 )
 
 src_group("public~gen" dynamix_sources
-    ${inc_path}/gen/message_macros.hpp
+    ${inc_path}/gen/template_message_macros.hpp
+    ${inc_path}/gen/legacy_message_macros.hpp
     ${inc_path}/gen/no_arity_message_macros.hpp
     ${inc_path}/gen/short_message_macros.hpp
+    ${inc_path}/gen/split_message_macros.hpp
+    ${inc_path}/gen/undef_message_macros.hpp
 )
 
 src_group("private" dynamix_sources
@@ -171,6 +183,10 @@ endif()
 
 if(DYNAMIX_BUILD_PERF)
     add_subdirectory(perf)
+endif()
+
+if(DYNAMIX_BUILD_COMPILER_PERF)
+    add_subdirectory(compiler/perf)
 endif()
 
 

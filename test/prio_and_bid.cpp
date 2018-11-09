@@ -7,7 +7,8 @@
 //
 #include <dynamix/dynamix.hpp>
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
+#include <sstream>
+
 #include "doctest/doctest.h"
 
 TEST_SUITE("prio & bid");
@@ -121,10 +122,6 @@ public:
 class a : public parent
 {
 public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "a"; }
-#endif
-
     void trace(std::ostream& out)
     {
         out << "a";
@@ -158,10 +155,6 @@ public:
 class b
 {
 public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "b"; }
-#endif
-
     void trace(std::ostream& out)
     {
         out << "b";
@@ -199,10 +192,6 @@ public:
 class c
 {
 public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "c"; }
-#endif
-
     void trace(std::ostream& out)
     {
         out << "c";
@@ -233,10 +222,6 @@ public:
 class d
 {
 public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "d"; }
-#endif
-
     void trace(std::ostream& out)
     {
         out << "d";
@@ -268,7 +253,7 @@ DYNAMIX_DEFINE_MIXIN(b,
     trace_msg & priority(2, priority_trace_msg)
     & priority(1, bid(1, bids_uni_msg)) & priority(-1, bids_bad_uni_msg) & bids_multi_override_msg & bid(1, bids_multi_msg));
 DYNAMIX_DEFINE_MIXIN(a,
-    trace_msg & priority(-1, from_parent<parent>(priority_trace_msg))
+    trace_msg & priority(-1, priority_trace_msg)
     & bid(2, priority(1, bids_uni_msg)) & bids_bad_uni_msg & bids_multi_override_msg & bids_multi_msg);
 DYNAMIX_DEFINE_MIXIN(c,
     trace_msg & priority(1, priority_trace_msg)

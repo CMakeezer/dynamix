@@ -1,5 +1,5 @@
 // DynaMix
-// Copyright (c) 2013-2017 Borislav Stanimirov, Zahary Karadjov
+// Copyright (c) 2013-2018 Borislav Stanimirov, Zahary Karadjov
 //
 // Distributed under the MIT Software License
 // See accompanying file LICENSE.txt or copy at
@@ -7,7 +7,6 @@
 //
 #include <dynamix/dynamix.hpp>
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest/doctest.h"
 
 TEST_SUITE("obj copying");
@@ -18,9 +17,6 @@ using namespace dynamix;
 class trivial_copy
 {
 public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "trivial_copy"; }
-#endif
     int i = 0;
 };
 
@@ -30,9 +26,6 @@ DYNAMIX_DEFINE_MIXIN(trivial_copy, none);
 class special_copy
 {
 public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "special_copy"; }
-#endif
     special_copy() = default;
     special_copy(const special_copy& other)
         : i(other.i + 1)
@@ -55,9 +48,6 @@ DYNAMIX_DEFINE_MIXIN(special_copy, none);
 class no_copy
 {
 public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "no_copy"; }
-#endif
     no_copy() = default;
     no_copy(const no_copy&) = delete;
     no_copy& operator=(const no_copy& other) = delete;

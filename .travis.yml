@@ -17,6 +17,9 @@ notifications:
     on_start: never
 git:
   depth: 5
+branches:
+  except:
+    - next
 
 cache:
   directories:
@@ -72,6 +75,13 @@ matrix:
 
     # Clang 5.0
     - env: COMPILER=clang++-5.0 ADDITIONAL_CXX_FLAGS="-g -fno-omit-frame-pointer -fsanitize=address,undefined"
+      addons: &clang50
+        apt:
+          packages: ["clang-5.0", "valgrind", "g++-6"]
+          sources: *apt_sources
+
+    # Clang 5.0 - sanitize thread
+    - env: COMPILER=clang++-5.0 ADDITIONAL_CXX_FLAGS="-g -fno-omit-frame-pointer -fsanitize=thread"
       addons: &clang50
         apt:
           packages: ["clang-5.0", "valgrind", "g++-6"]

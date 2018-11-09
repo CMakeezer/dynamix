@@ -64,7 +64,6 @@ public:
     {
         DYNAMIX_ASSERT(info.id == INVALID_MIXIN_ID);
 
-        info.name = DYNAMIX_MIXIN_TYPE_NAME(Mixin);
         info.size = sizeof(Mixin);
         info.alignment = std::alignment_of<Mixin>::value;
         info.constructor = &call_mixin_constructor<Mixin>;
@@ -74,11 +73,34 @@ public:
         info.move_constructor = get_mixin_move_constructor<Mixin>();
         info.allocator = _allocator;
 
-        internal_register_mixin_type(info);
+#if DYNAMIX_USE_TYPEID
+        info.name = get_mixin_name_from_typeid(typeid(Mixin).name());
+#   if defined(__GNUC__)
+        info.owns_name = true;
+#   endif
+#elif DYNAMIX_USE_STATIC_MEMBER_NAME
+        // defining DYNAMIX_USE_STATIC_MEMBER_NAME means that you must provide
+        // mixin names with a static const char* member function
+        info.name = Mixin::dynamix_mixin_name();
+#endif
 
         // see comments in feature_instance on why this manual registration is needed
         feature_registrator reg;
         _dynamix_parse_mixin_features(static_cast<Mixin*>(nullptr), reg);
+
+        if (reg.mixin_name)
+        {
+#if DYNAMIX_USE_TYPEID && defined(__GNUC__)
+            if (info.name) free_mixin_name_from_typeid(info.name);
+            info.owns_name = false;
+#endif
+            // override if available
+            info.name = reg.mixin_name;
+        }
+
+        DYNAMIX_ASSERT_MSG(info.name, "Mixin name must be provided through a feature");
+
+        internal_register_mixin_type(info);
 
         feature_parser<Mixin> parser;
         _dynamix_parse_mixin_features(static_cast<Mixin*>(nullptr), parser);
@@ -123,11 +145,14 @@ public:
     // get mixin id by name string
     mixin_id get_mixin_id_by_name(const char* mixin_name) const;
 
+    // erases all type infos with zero objects
+    void garbage_collect_type_infos();
+
 _dynamix_internal:
 
     domain();
     ~domain();
-    
+
     // non-copyable
     domain(const domain&) = delete;
     domain& operator=(const domain&) = delete;

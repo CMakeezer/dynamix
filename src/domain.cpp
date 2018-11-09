@@ -282,9 +282,10 @@ void domain::unregister_mixin_type(const mixin_type_info& info)
     DYNAMIX_ASSERT_MSG(registered == &info, "unregistering a mixin with known id but unknown data");
 
 #if DYNAMIX_USE_TYPEID && defined(__GNUC__)
-    // the name has been obtained through cxa_demangle
-    // we must free it
-    free(const_cast<void*>(static_cast<const void*>(info.name)));
+    // if the name wasn't overriden by a feature, it has been obtained through
+    // cxa_demangle and we must free it
+    if(info.owns_name)
+        free_mixin_name_from_typeid(info.name);
 #endif
 
     _mixin_type_infos[info.id] = nullptr;
@@ -348,6 +349,22 @@ mixin_id domain::get_mixin_id_by_name(const char* mixin_name) const
 
     // no mixin of this name found
     return INVALID_MIXIN_ID;
+}
+
+void domain::garbage_collect_type_infos()
+{
+    for (auto i = _object_type_infos.begin(); i != _object_type_infos.end(); )
+    {
+        if (i->second->num_objects == 0)
+        {
+            delete i->second;
+            i = _object_type_infos.erase(i);
+        }
+        else
+        {
+            ++i;
+        }
+    }
 }
 
 } // namespace internal

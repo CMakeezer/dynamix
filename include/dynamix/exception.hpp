@@ -67,7 +67,7 @@ class DYNAMIX_API bad_mixin_move : public exception {};
 
 #else // DYNAMIX_USE_EXCEPTIONS
 
-#   define DYNAMIX_THROW_UNLESS(test, exception) DYNAMIX_ASSERT_MSG(test, _DYNAMIX_PP_STRINGIZE(exception))
+#   define DYNAMIX_THROW_UNLESS(test, exception) DYNAMIX_ASSERT_MSG(test, I_DYNAMIX_PP_STRINGIZE(exception))
 
 #endif // DYNAMIX_USE_EXCEPTIONS
 
@@ -81,5 +81,11 @@ class DYNAMIX_API bad_mixin_move : public exception {};
 /// the messages will fall back to having `assert` calls in them
 #   define DYNAMIX_MSG_THROW_UNLESS(test, exception) DYNAMIX_THROW_UNLESS(test, exception)
 #else
-#   define DYNAMIX_MSG_THROW_UNLESS(test, exception) DYNAMIX_ASSERT_MSG(test, _DYNAMIX_PP_STRINGIZE(exception))
+#   define DYNAMIX_MSG_THROW_UNLESS(test, exception) DYNAMIX_ASSERT_MSG(test, I_DYNAMIX_PP_STRINGIZE(exception))
+#endif
+
+#if defined(DYNAMIX_NO_BAD_MULTICASTS)
+#   define DYNAMIX_MULTICAST_MSG_THROW_UNLESS(test, exception) (void)0
+#else
+#   define DYNAMIX_MULTICAST_MSG_THROW_UNLESS DYNAMIX_MSG_THROW_UNLESS
 #endif

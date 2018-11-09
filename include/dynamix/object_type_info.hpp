@@ -1,5 +1,5 @@
 // DynaMix
-// Copyright (c) 2013-2016 Borislav Stanimirov, Zahary Karadjov
+// Copyright (c) 2013-2018 Borislav Stanimirov, Zahary Karadjov
 //
 // Distributed under the MIT Software License
 // See accompanying file LICENSE.txt or copy at
@@ -102,10 +102,8 @@ _dynamix_internal:
     std::unique_ptr<pc_message_for_mixin[]> _message_data_buffer;
     call_table_entry _call_table[DYNAMIX_MAX_MESSAGES];
 
-#if DYNAMIX_ADDITIONAL_METRICS
     // number of living objects with this type info
-    mutable size_t num_objects = 0;
-#endif
+    mutable metric num_objects = {0};
 
     // this should be called after the mixins have been initialized
     void fill_call_table();

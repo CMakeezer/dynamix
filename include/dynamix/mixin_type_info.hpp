@@ -16,6 +16,7 @@
 
 #include "global.hpp"
 #include "message.hpp"
+#include "metrics.hpp"
 #include <type_traits>
 #include <utility>
 
@@ -44,8 +45,8 @@ public:
     /// Shows whether this is as initialized mixin type
     bool is_valid() const { return id != INVALID_MIXIN_ID; }
 
-    /// The mixin name: The class name or, in case `DYNAMIX_USE_TYPEID` is false,
-    /// the name returned from `dynamix_mixin_name`.
+    /// The mixin name: The class name or, in case `mixin_name` feature is provided,
+    /// the manual name set from there
     const char* name;
 
     /// Size of the mixin type
@@ -71,7 +72,7 @@ public:
 
 #if DYNAMIX_ADDITIONAL_METRICS
     /// Number of "living" mixins of this type.
-    mutable size_t num_mixins;
+    mutable metric num_mixins = {0};
 #endif
 
 protected:
@@ -105,6 +106,12 @@ public:
 
     // list of all the message infos for the messages this mixin supports
     std::vector<message_for_mixin> message_infos;
+
+#if DYNAMIX_USE_TYPEID && defined(__GNUC__)
+    // boolean which shows whether the name in the mixin type info was obtained
+    // by cxa demangle and should be freed
+    bool owns_name = false;
+#endif
 
     mixin_type_info()
         : basic_mixin_type_info(INVALID_MIXIN_ID)

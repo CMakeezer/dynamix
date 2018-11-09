@@ -7,7 +7,6 @@
 //
 #include <dynamix/dynamix.hpp>
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest/doctest.h"
 
 TEST_SUITE("core");
@@ -30,18 +29,11 @@ DYNAMIX_MESSAGE_0(int, inherited);
 
 class no_messages
 {
-public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "no_messages"; }
-#endif
 };
 
 class counter
 {
 public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "counter"; }
-#endif
     counter()
         : _count(0)
     {}
@@ -74,9 +66,6 @@ struct parent
 class type_checker : public parent
 {
 public:
-#if !DYNAMIX_USE_TYPEID
-    static const char* dynamix_mixin_name() { return "type_checker"; }
-#endif
     const void* get_self() const
     {
         return this;
@@ -259,7 +248,7 @@ TEST_CASE("type_template")
 
 DYNAMIX_DEFINE_MIXIN(no_messages, none);
 DYNAMIX_DEFINE_MIXIN(counter, dummy_msg & multi_msg);
-DYNAMIX_DEFINE_MIXIN(type_checker, get_self_msg & multi_msg & from_parent<parent>(inherited_msg));
+DYNAMIX_DEFINE_MIXIN(type_checker, get_self_msg & multi_msg & inherited_msg);
 
 DYNAMIX_DEFINE_MESSAGE(dummy);
 DYNAMIX_DEFINE_MESSAGE(get_self);

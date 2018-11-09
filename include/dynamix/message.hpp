@@ -70,11 +70,10 @@ struct DYNAMIX_API message_for_mixin
     message_t* message; // message object
     mixin_id _mixin_id; // id of the handling mixin type information
 
-    // the caller member is a pointer to a template function instantiated by the message macros
-    // this function takes the appropriate parameters as arguments and is instantiated to call
-    // the mixin method, even from void*
-    // code based on
-    // http://www.codeproject.com/Articles/11015/The-Impossibly-Fast-C-Delegates
+    // the caller member is a pointer to a lambda created by the message macros
+	// (see get_caller_for)
+    // this function takes the appropriate parameters as arguments and calls
+    // the mixin method from void*
     func_ptr caller;
 
     // message perks
@@ -136,16 +135,8 @@ set_num_results_for(Combinator&, size_t) {}
 
 struct message_wrapper {};
 
-template <typename Message, typename Parent>
-struct msg_from_parent : public message_wrapper {};
-
 } // namespace internal
 
-template <typename Parent, typename Message>
-internal::msg_from_parent<Message, Parent> from_parent(Message*)
-{
-    return internal::msg_from_parent<Message, Parent>();
-}
 
 // Used in the mixin's feature list to set perks to messages
 template <typename Message>
@@ -165,23 +156,6 @@ internal::message_perks<Message> bid(int b, Message*)
 }
 
 // Perks of message wrappers
-template <typename Message, typename Parent>
-internal::message_perks<internal::msg_from_parent<Message, Parent>>
-    priority(int p, internal::msg_from_parent<Message, Parent>)
-{
-    internal::message_perks<internal::msg_from_parent<Message, Parent>> mp;
-    mp.priority = p;
-    return mp;
-}
-
-template <typename Message, typename Parent>
-internal::message_perks<internal::msg_from_parent<Message, Parent>>
-    bid(int b, internal::msg_from_parent<Message, Parent>)
-{
-    internal::message_perks<internal::msg_from_parent<Message, Parent>> mp;
-    mp.bid = b;
-    return mp;
-}
 
 // So perks can be passed as arguments to one another
 template <typename Feature>

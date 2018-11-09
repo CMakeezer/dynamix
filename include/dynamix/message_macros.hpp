@@ -37,28 +37,6 @@ template <typename Ret, typename... Args>
 struct msg_caller
 {
     using caller_func = Ret (*)(void*, Args...);
-
-    // makes the actual method call    
-    // the MethodOwner type describes the owner of the method in case it's not
-    // the mixin but one of its parents
-    template <typename Mixin, typename MethodOwner, Ret (MethodOwner::*Method)(Args...)>
-    static Ret caller(void* mixin, Args... args)
-    {
-        auto m = reinterpret_cast<Mixin*>(mixin);
-        return (m->*Method)(std::forward<Args>(args)...);
-    }
-
-    // we need this silly-named alternative because there is no standard way to
-    // distiguish between constness-based overloads when providing a member function
-    // as a template argument
-    // because of this the macro which instantiates the template also constructs this
-    // function's name based on the message constness
-    template <typename Mixin, typename MethodOwner, Ret (MethodOwner::*Method)(Args...) const>
-    static Ret callerconst(void* mixin, Args... args)
-    {
-        auto m = reinterpret_cast<const Mixin*>(mixin);
-        return (m->*Method)(std::forward<Args>(args)...);
-    }
 };
 
 // instead of adding the multi and unicast calls in the same struct, we split it in two
@@ -111,7 +89,7 @@ struct msg_multicast : public message_t, public msg_caller<Ret, Args...>
     {}
 
     template <typename Combinator>
-    static void make_combinator_call(Object& obj, Combinator& combinator, Args&&... args)
+    static void make_combinator_call(Object& obj, Combinator& combinator, Args&... args)
     {
         const ::dynamix::feature& self = _dynamix_get_mixin_feature_fast(static_cast<Derived*>(nullptr));
         DYNAMIX_ASSERT(static_cast<const message_t&>(self).mechanism
@@ -123,8 +101,7 @@ struct msg_multicast : public message_t, public msg_caller<Ret, Args...>
         auto begin = call_entry.begin;
         auto end = call_entry.end;
 
-        DYNAMIX_MSG_THROW_UNLESS(begin, ::dynamix::bad_message_call);
-        DYNAMIX_ASSERT(end);
+        DYNAMIX_MULTICAST_MSG_THROW_UNLESS(begin, ::dynamix::bad_message_call);
 
         set_num_results_for(combinator, size_t(end - begin));
         for (auto iter = begin; iter != end; ++iter)
@@ -140,7 +117,7 @@ struct msg_multicast : public message_t, public msg_caller<Ret, Args...>
 
             auto func = reinterpret_cast<typename msg_caller<Ret, Args...>::caller_func>(msg_data->caller);
 
-            if (!combinator.add_result(func(mixin_data, std::forward<Args>(args)...)))
+            if (!combinator.add_result(func(mixin_data, args...)))
             {
                 return;
             }
@@ -156,7 +133,7 @@ struct msg_multicast : public message_t, public msg_caller<Ret, Args...>
     //     constexpr bool add_result(R&& r) const { return true; }
     // };
     // with c++17 we would be able to add if constexpr(is_same(void, Ret)) to make it work
-    static void make_call(Object& obj, Args&&... args)
+    static void make_call(Object& obj, Args&... args)
     {
         const ::dynamix::feature& self = _dynamix_get_mixin_feature_fast(static_cast<Derived*>(nullptr));
         DYNAMIX_ASSERT(static_cast<const message_t&>(self).mechanism
@@ -168,8 +145,7 @@ struct msg_multicast : public message_t, public msg_caller<Ret, Args...>
         auto begin = call_entry.begin;
         auto end = call_entry.end;
 
-        DYNAMIX_MSG_THROW_UNLESS(begin, ::dynamix::bad_message_call);
-        DYNAMIX_ASSERT(end);
+        DYNAMIX_MULTICAST_MSG_THROW_UNLESS(begin, ::dynamix::bad_message_call);
 
         for (auto iter = begin; iter != end; ++iter)
         {
@@ -184,7 +160,7 @@ struct msg_multicast : public message_t, public msg_caller<Ret, Args...>
 
             auto func = reinterpret_cast<typename msg_caller<Ret, Args...>::caller_func>(msg_data->caller);
 
-            func(mixin_data, std::forward<Args>(args)...);
+            func(mixin_data, args...);
         }
     }
 };
@@ -196,31 +172,33 @@ struct msg_multicast : public message_t, public msg_caller<Ret, Args...>
 // that shows that they're for internal use only
 
 /// \internal
-#define _DYNAMIX_MESSAGE_STRUCT_NAME(message_name) _DYNAMIX_PP_CAT(dynamix_msg_, message_name)
+#define I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name) I_DYNAMIX_PP_CAT(dynamix_msg_, message_name)
 /// \internal
-#define _DYNAMIX_MESSAGE_TAG(message_name) _DYNAMIX_PP_CAT(message_name, _msg)
+#define I_DYNAMIX_MESSAGE_TAG(message_name) I_DYNAMIX_PP_CAT(message_name, _msg)
 /// \internal
-#define _DYNAMIX_MESSAGE_CALLER_STRUCT(mechanism) _DYNAMIX_PP_CAT(msg_, mechanism)
-
-// construct the appropriate caller name, based on the message constness
-/// \internal
-#define _DYNAMIX_CALLER_NAME(...) _DYNAMIX_PP_CAT(caller, __VA_ARGS__)
+#define I_DYNAMIX_MESSAGE_CALLER_STRUCT(mechanism) I_DYNAMIX_PP_CAT(msg_, mechanism)
 
 // default impl helper macros
 
 // name of default implementation struct
 /// \internal
-#define DYNAMIX_DEFAULT_IMPL_STRUCT(message_name) _DYNAMIX_PP_CAT(message_name, _default_impl_t)
+#define DYNAMIX_DEFAULT_IMPL_STRUCT(message_name) I_DYNAMIX_PP_CAT(message_name, _default_impl_t)
 
 // no-arity macros
 
 // macro which gives out a sensible error if a no-arity macro is called with a bad number of arguments
 /// \internal
-#define _DYNAMIX_MESSAGE_ARG_ERROR static_assert(false, "DynaMix macro called with a bad number of arguments")
+#define I_DYNAMIX_MESSAGE_ARG_ERROR static_assert(false, "DynaMix macro called with a bad number of arguments")
 
 // a workaround to a visaul c issue which doesn't expand __VA_ARGS__ but inead gives them as a single argument
 /// \internal
-#define _DYNAMIX_VA_ARGS_PROXY(MACRO, args) MACRO args
+#define I_DYNAMIX_VA_ARGS_PROXY(MACRO, args) MACRO args
+
+// a macro used in the legacy message macros to get the mixin data directly, skipping function calls
+// GREATLY improves message call time
+/// \internal
+#define I_DYNAMIX_GET_MIXIN_DATA(obj, id) \
+    reinterpret_cast<char*>(const_cast<void*>(obj._mixin_data[obj._type_info->_mixin_indices[id]].mixin()))
 
 #if defined(DYNAMIX_DOXYGEN)
 // use these macros for the docs only
@@ -339,32 +317,51 @@ struct msg_multicast : public message_t, public msg_caller<Ret, Args...>
 
 #else
 
+// optionally don't include any message macros and let the user decide which
+// set they're going to use for each message
+#if !defined(DYNAMIX_NO_MESSAGE_MACROS)
 // include the generated macros
-#include "gen/message_macros.hpp"
+// choose definition header
+// making this choice DOES NOT require you to rebuild the library
+// these headers are purely user facing
+#if defined(DYNAMIX_USE_LEGACY_MESSAGE_MACROS)
+// this file contains the old-style macros which have a lot of the calling code
+// in the macros itself. They make it a bit harder to step into messages when
+// debugging but in some cases with gcc and clang compile much faster
+#   include "gen/legacy_message_macros.hpp"
+#else
+// these are the new-style message macros only a single step into is needed when
+// debugging in order to go to debuggable c++ code
+// however they may be much slower to compile on gcc and clang
+// this is generally the recommended header, but users are encouraged to test
+// their compilation times with gcc and clang with the other header as well
+#   include "gen/template_message_macros.hpp"
+#endif
+#endif
 
 // define message macro
 #define DYNAMIX_DEFINE_MESSAGE(message_name) \
     /* create feature getters for the message */ \
-    ::dynamix::feature& _dynamix_get_mixin_feature_safe(const _DYNAMIX_MESSAGE_STRUCT_NAME(message_name)*) \
+    ::dynamix::feature& _dynamix_get_mixin_feature_safe(const I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)*) \
     { \
-        return ::dynamix::internal::feature_instance<_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)>::the_feature_safe(); \
+        return ::dynamix::internal::feature_instance<I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)>::the_feature_safe(); \
     } \
-    const ::dynamix::feature& _dynamix_get_mixin_feature_fast(const _DYNAMIX_MESSAGE_STRUCT_NAME(message_name)*) \
+    const ::dynamix::feature& _dynamix_get_mixin_feature_fast(const I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)*) \
     { \
-        return ::dynamix::internal::feature_instance<_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)>::the_feature_fast(); \
+        return ::dynamix::internal::feature_instance<I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)>::the_feature_fast(); \
     } \
     /* create a feature registrator */ \
-    void _dynamix_register_mixin_feature(const _DYNAMIX_MESSAGE_STRUCT_NAME(message_name)*) \
+    void _dynamix_register_mixin_feature(const I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)*) \
     { \
         ::dynamix::internal::domain::safe_instance(). \
-            register_feature(::dynamix::internal::feature_instance<_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)>::the_feature_safe()); \
+            register_feature(::dynamix::internal::feature_instance<I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)>::the_feature_safe()); \
     } \
     /* instantiate metafunction initializator in case no class registers the message */ \
-    inline void _dynamix_register_message(_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)*) \
+    inline void _dynamix_register_message(I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)*) \
     { \
-        ::dynamix::internal::message_registrator<_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)>::registrator.unused = true; \
+        ::dynamix::internal::message_registrator<I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name)>::registrator.unused = true; \
     } \
     /* provide a tag instance */ \
-    _DYNAMIX_MESSAGE_STRUCT_NAME(message_name) * _DYNAMIX_MESSAGE_TAG(message_name)
+    I_DYNAMIX_MESSAGE_STRUCT_NAME(message_name) * I_DYNAMIX_MESSAGE_TAG(message_name)
 
 #endif

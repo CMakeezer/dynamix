@@ -15,6 +15,7 @@
 
 #include "global.hpp"
 #include "message.hpp"
+#include "features.hpp"
 #include "object_type_info.hpp"
 #include "allocators.hpp" // clang needs this to assign mixin_allocator to allocator :(
 
@@ -43,27 +44,28 @@ public:
         return operator&(static_cast<Message*>(nullptr));
     }
 
-    template <typename Message, typename Parent>
-    feature_registrator& operator & (internal::msg_from_parent<Message, Parent>)
-    {
-        return operator&(static_cast<Message*>(nullptr));
-    }
-
-    template <typename Message, typename Parent>
-    feature_registrator& operator & (message_perks<msg_from_parent<Message, Parent>>)
-    {
-        return operator&(static_cast<Message*>(nullptr));
-    }
-
     feature_registrator& operator & (mixin_allocator&)
     {
         // nothing special to do here
         return *this;
     }
 
+    feature_registrator& operator & (mixin_name_feature n)
+    {
+        mixin_name = n.name;
+        return *this;
+    }
+
+    feature_registrator& operator & (const noop_feature_t*)
+    {
+        return *this;
+    }
+
     void operator & (const no_features_t*)
     {
     }
+
+    const char* mixin_name = nullptr;
 };
 
 
@@ -87,21 +89,7 @@ public:
     template <typename Message>
     feature_parser& operator & (message_perks<Message> mp)
     {
-        parse_message_with_perks<Message, Mixin>(mp.bid, mp.priority);
-        return *this;
-    }
-
-    template <typename Message, typename Parent>
-    feature_parser& operator & (message_perks<msg_from_parent<Message, Parent>> mp)
-    {
-        parse_message_with_perks<Message, Parent>(mp.bid, mp.priority);
-        return *this;
-    }
-
-    template <typename Message, typename Parent>
-    feature_parser& operator & (msg_from_parent<Message, Parent>)
-    {
-        parse_message_with_perks<Message, Parent>(0, 0);
+        parse_message_with_perks<Message>(mp.bid, mp.priority);
         return *this;
     }
 
@@ -117,26 +105,34 @@ public:
     {
     }
 
+    feature_parser& operator & (mixin_name_feature)
+    {
+        return *this;
+    }
+
+    feature_parser& operator & (const noop_feature_t*)
+    {
+        return *this;
+    }
+
 private:
     template <typename Message>
     void parse_feature(mixin_type_info& mixin_info, Message& msg, const message_feature_tag&)
     {
-        parse_message<Mixin>(mixin_info, msg, 0, 0);
+        parse_message(mixin_info, msg, 0, 0);
     }
 
-    template <typename Message, typename MethodOwner>
+    template <typename Message>
     void parse_message_with_perks(int bid, int priority)
     {
         Message& msg = static_cast<Message&>(_dynamix_get_mixin_feature_safe(static_cast<Message*>(nullptr)));
         DYNAMIX_ASSERT(msg.id != INVALID_FEATURE_ID);
 
         mixin_type_info& mixin_info = _dynamix_get_mixin_type_info(static_cast<Mixin*>(nullptr));
-        parse_message<MethodOwner>(mixin_info, msg, bid, priority);
+        parse_message(mixin_info, msg, bid, priority);
     }
 
-    // method owner is the owner of the method
-    // it might not be the target mixin but one of its parents
-    template <typename MethodOwner, typename Message>
+    template <typename Message>
     void parse_message(mixin_type_info& mixin_info, Message& msg, int bid, int priority)
     {
 #if DYNAMIX_DEBUG
@@ -151,7 +147,7 @@ private:
         message_for_mixin& mfm = mixin_info.message_infos.back();
         mfm.message = &msg;
         mfm._mixin_id = mixin_info.id;
-        mfm.caller = msg.template get_caller_for<Mixin, MethodOwner>();
+        mfm.caller = msg.template get_caller_for<Mixin>();
         mfm.bid = bid;
         mfm.priority = priority;
     }

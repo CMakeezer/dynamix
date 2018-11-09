@@ -8,10 +8,16 @@
 
 # script generating message declaration macros
 
+INCLUDE = '../include/dynamix/gen/'
 MAX_ARITY = File.open('arity').read.strip.to_i + 1
-OUT_FILE = '../include/dynamix/gen/message_macros.hpp'
-NO_ARITY_OUT_FILE = '../include/dynamix/gen/no_arity_message_macros.hpp'
-SHORT_OUT_FILE = '../include/dynamix/gen/short_message_macros.hpp'
+OUT_FILE = INCLUDE + 'template_message_macros.hpp'
+LEGACY_OUT_FILE = INCLUDE + 'legacy_message_macros.hpp'
+ARITY_FNAME = 'arity_message_macros.hpp'
+ARITY_OUT_FILE = INCLUDE + ARITY_FNAME
+SPLIT_OUT_FILE = INCLUDE + 'split_message_macros.hpp'
+NO_ARITY_OUT_FILE = INCLUDE + 'no_arity_message_macros.hpp'
+SHORT_OUT_FILE = INCLUDE + 'short_message_macros.hpp'
+UNDEF_OUT_FILE= INCLUDE + 'undef_message_macros.hpp'
 
 HEADER = <<DATA
 // DynaMix
@@ -69,6 +75,39 @@ File.open(OUT_FILE, 'w') do |f|
     params = params_for_arity(i)
     f.write(DECL % params)
   end
+  f.puts("#include \"#{ARITY_FNAME}\"")
+end
+
+LEGACY_DECL = File.open('legacy_message_macros_template', 'r').read
+
+File.open(LEGACY_OUT_FILE, 'w') do |f|
+  f.write(HEADER)
+  MAX_ARITY.times do |i|
+    params = params_for_arity(i)
+    f.write(LEGACY_DECL % params)
+  end
+  f.puts("#include \"#{ARITY_FNAME}\"")
+end
+
+SPLIT_DECL = File.open('split_message_macros_template', 'r').read
+
+File.open(SPLIT_OUT_FILE, 'w') do |f|
+  f.write(HEADER)
+  MAX_ARITY.times do |i|
+    params = params_for_arity(i)
+    f.write(SPLIT_DECL % params)
+  end
+  f.puts("#include \"#{ARITY_FNAME}\"")
+end
+
+ARITY_DECL = File.open('arity_message_macros_template', 'r').read
+
+File.open(ARITY_OUT_FILE, 'w') do |f|
+  f.write(HEADER)
+  MAX_ARITY.times do |i|
+    params = params_for_arity(i)
+    f.write(ARITY_DECL % params)
+  end
 end
 
 ##########################
@@ -87,9 +126,9 @@ File.open('no_arity_message_macros_template', 'r').each_line do |line|
   macro = macro_arity % empty_arity
   get_macro = "_GET_#{macro}_MACRO"
 
-  arity_macros = (MAX_ARITY-1).downto(0).to_a.map { |i| macro_arity % { :arity => "_#{i}" } }.join(', _DYNAMIX_MESSAGE_ARG_ERROR, ')
+  arity_macros = (MAX_ARITY-1).downto(0).to_a.map { |i| macro_arity % { :arity => "_#{i}" } }.join(', I_DYNAMIX_MESSAGE_ARG_ERROR, ')
 
-  output << "#define #{macro}(...) \\\n   _DYNAMIX_VA_ARGS_PROXY(#{get_macro}, (__VA_ARGS__, #{arity_macros}))(__VA_ARGS__)"
+  output << "#define #{macro}(...) \\\n   I_DYNAMIX_VA_ARGS_PROXY(#{get_macro}, (__VA_ARGS__, #{arity_macros}))(__VA_ARGS__)"
   output << "#define #{get_macro}#{macro_args % args} MACRO"
 end
 
@@ -140,6 +179,25 @@ File.open(SHORT_OUT_FILE, 'w') do |f|
   f.write(HEADER)
   f.puts('#pragma once')
   f.puts
+  f.write(output.join("\n"))
+  f.puts
+end
+
+#########################
+# undefs
+
+output = []
+
+File.open('undef_message_macros_template', 'r').each_line do |line|
+  next if line.strip!.length == 0
+  line = '#undef ' + line
+  MAX_ARITY.times do |i|
+    output << line % { :arity => i }
+  end
+end
+
+File.open(UNDEF_OUT_FILE, 'w') do |f|
+  f.write(HEADER)
   f.write(output.join("\n"))
   f.puts
 end

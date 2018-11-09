@@ -1,5 +1,5 @@
 // DynaMix
-// Copyright (c) 2013-2016 Borislav Stanimirov, Zahary Karadjov
+// Copyright (c) 2013-2018 Borislav Stanimirov, Zahary Karadjov
 //
 // Distributed under the MIT Software License
 // See accompanying file LICENSE.txt or copy at
@@ -9,7 +9,6 @@
 
 #if DYNAMIX_USE_EXCEPTIONS
 
-#define DOCTEST_CONFIG_IMPLEMENT_WITH_MAIN
 #include "doctest/doctest.h"
 
 TEST_SUITE("exceptions");
@@ -29,6 +28,7 @@ DYNAMIX_MESSAGE_0(void, u1);
 DYNAMIX_MESSAGE_0(void, u2);
 DYNAMIX_MESSAGE_0(void, unused);
 
+#if !defined(DYNAMIX_NO_MSG_THROW)
 TEST_CASE("ex_bad_message_call")
 {
     object o;
@@ -50,6 +50,7 @@ TEST_CASE("ex_bad_message_call")
     CHECK_THROWS_AS(m2(o, sum), bad_message_call);
     CHECK_THROWS_AS(unused(o), bad_message_call);
 }
+#endif
 
 TEST_CASE("ex_bad_mutation_source")
 {

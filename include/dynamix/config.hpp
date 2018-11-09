@@ -28,9 +28,34 @@
 // DynaMix heavily relies on type names
 // setting the DYNAMIX_USE_TYPEID to true will cause it to obtain said names with type_info via typeid.
 // setting it to false will require the following extra steps:
-//     * mixins must add static const char* dynamix_mixin_name() { return <mixin class name>; }
+// if DYNAMIX_USE_MIXIN_NAME_FROM_MACRO
+//      mixins will obtain the name from the macro
+//      WARNING: multiple with the same name in different namespaces won't work!
+// if DYNAMIX_USE_STATIC_MEMBER_NAME is defined
+//      mixins must add static const char* dynamix_mixin_name() { return <mixin class name>; }
+// if none of the above is defined
+//      users must supply the name of the mixins with the mixin_name feature
 #if !defined(DYNAMIX_USE_TYPEID)
 #   define DYNAMIX_USE_TYPEID 1
+#endif
+
+#if !DYNAMIX_USE_TYPEID
+// backwards compatibility
+// in previous versions when typeid was not used to get the mixin name
+// the user had to set a manual name for a mixin by providing a
+// method `static const char* dynamix_mixin_name` per mixin
+// this is deprecated but kept for backwards compatibility
+#   if !defined(DYNAMIX_USE_STATIC_MEMBER_NAME)
+#       define DYNAMIX_USE_STATIC_MEMBER_NAME 0
+// an alternative way of obtaining mixin names without typeid is to infer them
+// from the mixin definition macro
+// HOWEVER if you have mixins in namespaces the namespace name won't be included
+// this may lead to name clasesh if two mixins with the same name exist in
+// different namespaces.
+// USE WITH CAUTION
+#   elif !defined(DYNAMIX_USE_MIXIN_NAME_FROM_MACRO)
+#       define DYNAMIX_USE_MIXIN_NAME_FROM_MACRO 0
+#   endif
 #endif
 
 // enable various debug checks and assertions
@@ -84,7 +109,6 @@
 // maintaining them is cheap, but does not cost zero
 // the additional metrics are
 // mixin_type_info::num_mixins - number of living mixins of this type
-// object_type_info::num_objects - number of living objects of this type
 #if !defined(DYNAMIX_ADDITIONAL_METRICS)
 #   define DYNAMIX_ADDITIONAL_METRICS 1
 #endif
